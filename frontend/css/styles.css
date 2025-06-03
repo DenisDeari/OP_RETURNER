@@ -1,0 +1,231 @@
+/* --- Base and Font --- */
+@font-face {
+    font-family: 'BTTFStyleFont';
+    src: url('/fonts/BTTF.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+body {
+    font-family: sans-serif;
+    line-height: 1.6;
+    margin: 0; /* Remove default margin */
+    padding: 20px; /* Add padding to body instead of margin */
+    background-color: #0A2342; /* Dark Blue Background */
+    color: #f0f0f0; /* Light default text color for contrast */
+}
+
+/* --- Header Styling --- */
+header {
+    /* text-align: center; */ /* Alignment is handled by lines now */
+    margin-bottom: 30px;
+}
+
+#main-title {
+    font-family: 'BTTFStyleFont', Impact, Charcoal, sans-serif;
+    line-height: 1.1;
+    /* === Add color and shadow back === */
+    color: #D83C00; /* Orange Color */
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+#title-line-1 {
+    display: block;
+    font-size: 2.5em;
+    text-align: left;
+}
+
+#title-line-2 {
+    display: block;
+    font-size: 1.8em;
+    text-align: right;
+}
+
+/* --- Main Content Area --- */
+main {
+    max-width: 800px;
+    margin: auto;
+    background: #1C3A5E; /* Slightly Lighter Dark Blue */
+    padding: 25px; /* Increased padding slightly */
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.3); /* Adjusted shadow */
+}
+
+/* --- Form Elements --- */
+textarea {
+    width: 95%;
+    padding: 10px;
+    margin-bottom: 10px; /* Increased margin */
+    border: 1px solid #D83C00; /* Orange border */
+    border-radius: 4px;
+    background-color: #f0f0f0; /* Light background for input */
+    color: #333; /* Dark text for input */
+    font-size: 1em;
+}
+
+button {
+    padding: 12px 18px; /* Slightly larger button */
+    background-color: #D83C00; /* Orange Button Background */
+    color: #ffffff; /* White text on button */
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: bold;
+    transition: background-color 0.2s ease; /* Smooth hover transition */
+}
+
+button:hover {
+    background-color: #B83000; /* Darker Orange on hover */
+}
+
+button:disabled { /* Style for disabled button */
+    background-color: #888;
+    cursor: not-allowed;
+}
+
+/* --- Payment/Status Section --- */
+#payment-section {
+    margin-top: 25px;
+    padding: 20px;
+    border: 1px solid #D83C00; /* Orange border */
+    border-radius: 5px;
+    background-color: #0A2342; /* Match body background or slightly different blue */
+}
+
+#payment-address-container {
+    margin-bottom: 15px;
+}
+
+#qrcode {
+    width: 138px; /* Slightly larger */
+    height: 138px;
+    margin-top: 10px;
+    border: 1px solid #f0f0f0; /* Light border for QR */
+    padding: 5px;
+    display: inline-block;
+    background-color: #fff; /* White background for QR code readability */
+}
+
+#qrcode img {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* Make important text stand out */
+strong {
+    word-wrap: break-word;
+    color: #FFA500; /* Lighter Orange for emphasis? Or keep light grey? */
+    /* Or use the main orange: color: #D83C00; */
+}
+
+#status-display {
+    font-weight: bold;
+    margin-top: 10px;
+    display: inline-block; /* Or block */
+    word-break: break-all;
+}
+
+/* --- Lookup Section --- */
+#lookup-section {
+     margin-top: 25px;
+     padding-top: 15px;
+     border-top: 1px solid #1C3A5E; /* Separator line */
+}
+
+#lookup-section input {
+    padding: 8px;
+    margin-right: 5px;
+    border: 1px solid #D83C00; /* Orange border */
+    border-radius: 4px;
+    background-color: #f0f0f0; /* Light background */
+    color: #333; /* Dark text */
+}
+
+#lookup-status {
+    margin-top: 10px;
+    font-style: italic;
+}
+
+/* --- Processing Indicator --- */
+#processing-indicator {
+    color: #FFA500; /* Orange accent for processing text */
+    font-weight: bold;
+    margin-top: 15px;
+    margin-bottom: 10px;
+    text-align: center;
+    /* Basic dot animation (optional) */
+    /* animation: dots 1.5s infinite steps(1, end); */
+}
+
+@keyframes dots {
+  0%, 20% { color: rgba(0,0,0,0); text-shadow: .25em 0 0 rgba(0,0,0,0), .5em 0 0 rgba(0,0,0,0); }
+  40% { color: #FFA500; text-shadow: .25em 0 0 rgba(0,0,0,0), .5em 0 0 rgba(0,0,0,0); }
+  60% { text-shadow: .25em 0 0 #FFA500, .5em 0 0 rgba(0,0,0,0); }
+  80%, 100% { text-shadow: .25em 0 0 #FFA500, .5em 0 0 #FFA500; }
+}
+
+
+/* --- Success Section --- */
+#success-section {
+    max-width: 800px; /* Match main section width */
+    margin: 20px auto; /* Centered, with space */
+    padding: 25px;
+    background: #1C3A5E; /* Consistent with main section */
+    border: 1px solid #D83C00; /* Orange border */
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+    color: #f0f0f0; /* Light text */
+}
+
+#success-section h2 {
+    color: #5cb85c; /* Green for success message */
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+#success-section p {
+    margin-bottom: 10px;
+}
+
+#success-section .label { /* Re-using .label style */
+    font-weight: bold;
+    color: #FFA500;
+    margin-right: 5px;
+}
+
+#success-section .breakable { /* Re-using .breakable style */
+    word-break: break-all;
+    display: inline-block;
+    vertical-align: bottom;
+    color: #f0f0f0;
+}
+
+#final-message { /* For the displayed original message */
+    background-color: #0A2342; /* Darker background for emphasis */
+    padding: 10px;
+    border-radius: 4px;
+    font-family: monospace; /* Good for seeing the message as is */
+    white-space: pre-wrap; /* Preserve whitespace and wrap */
+}
+
+#final-op-return-txhex {
+    background-color: #071c33; /* Even darker blue */
+    color: #d0d0d0;
+    padding: 10px;
+    border: 1px solid #2a4a6a; /* Adjusted border for dark theme */
+    border-radius: 4px;
+    overflow-x: auto; /* Horizontal scroll for long hex */
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: monospace;
+    max-height: 150px; /* Scroll for very long hex, adjust as needed */
+    font-size: 0.85em; /* Slightly smaller for dense hex */
+}
+
+#success-section button { /* Style for the new button in success section */
+    display: block; /* Make it full width */
+    width: 100%;
+    margin-top: 20px;
+}

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Immortalize Message</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+    <header>
+        <h1 id="main-title">
+            <span id="title-line-1">IMMORTALIZE YOUR MESSAGE</span>
+            <span id="title-line-2">on the bitcoin blockchain</span>
+        </h1>
+    </header>
+
+    <main>
+        <section id="input-section">
+            <h2>Enter Your Message (Max 80 Bytes)</h2>
+            <textarea id="message-input" rows="4" maxlength="80" placeholder="Your message here..."></textarea>
+            <p>Bytes used: <span id="byte-counter">0</span> / 80</p>
+            <button id="submit-button">Immortalize!</button>
+        </section>
+
+        <section id="payment-section" style="display: none;">
+            <h2>Step 2: Make Payment</h2>
+            <p>Send exactly <strong id="required-amount">1000</strong> satoshis to the address below:</p>
+            <div id="payment-address-container">
+                <p>Address: <strong id="payment-address"></strong></p>
+                <div id="qrcode"></div>
+            </div>
+            <p>Your Request ID: <strong id="request-id"></strong></p>
+            <p>Status: <strong id="status-display">Waiting for payment...</strong></p>
+            <p id="processing-indicator" style="display: none; font-weight: bold; color: #FFA500;">
+    Creating & Broadcasting your message transaction... Please wait.
+</p>
+            <hr style="margin-top: 20px; margin-bottom: 20px;">
+            <button id="new-request-button">Start New Message</button>
+
+        </section>
+
+         <section id="lookup-section">
+            <hr>
+            <h2>Check Status of a Previous Request</h2>
+            <input type="text" id="lookup-id-input" placeholder="Enter Request ID">
+            <button id="lookup-button">Check Status</button>
+            <p id="lookup-status"></p>
+         </section>
+    </main>
+    <section id="success-section" style="display: none;">
+    <h2>Message Immortalized!</h2>
+    <p>Your original message:</p>
+    <blockquote id="final-message" style="font-style: italic; border-left: 3px solid #D83C00; padding-left: 10px; margin-left: 0;"></blockquote>
+
+    <p>
+        <span class="label">OP_RETURN Transaction ID:</span><br>
+        <strong id="final-op-return-txid" class="breakable"></strong>
+    </p>
+    <p>
+        <a id="explorer-link" href="#" target="_blank" rel="noopener noreferrer" style="color: #FFA500; text-decoration: underline;">View on Block Explorer</a>
+    </p>
+
+    <div>
+        <p><span class="label">Raw Transaction Hex (contains your message):</span></p>
+        <pre id="final-op-return-txhex"></pre>
+    </div>
+
+    <hr style="margin-top: 20px; margin-bottom: 20px;">
+    <button id="success-new-request-button">Embed Another Message</button>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
