@@ -1,11 +1,8 @@
 // backend/src/routes/api.js
 const express = require('express');
-const { v4: uuidv4 } = require('uuid');
-const bitcoin = require('bitcoinjs-lib');
 const axios = require('axios');
 
 // This function creates a router and injects dependencies (db, wallet, etc.)
-// This is a clean way to avoid global variables.
 function createApiRouter(db, rootNode, config, requestQueue) {
     const router = express.Router();
 
@@ -48,9 +45,12 @@ function createApiRouter(db, rootNode, config, requestQueue) {
                     resolve(row);
                 });
             });
-            if (row) res.status(200).json(row);
-            else res.status(404).json({ error: 'Request not found' });
-        } catch (error) {
+            if (row) {
+                res.status(200).json(row);
+            } else {
+                res.status(404).json({ error: 'Request not found' });
+            }
+        } catch (error) { // <-- THIS LINE IS NOW CORRECTED
             console.error(`Error in /api/request-status/${requestId}:`, error);
             res.status(500).json({ error: 'Failed to retrieve request status' });
         }
@@ -67,12 +67,12 @@ function createApiRouter(db, rootNode, config, requestQueue) {
             
             const hookId = await registerWebhook(result.address);
             if (hookId) {
-                db.run('UPDATE requests SET blockcypherHookId = ? WHERE id = ?', [hookId, result.requestId]);
-                console.log(`Successfully updated hook ID ${hookId} for request ${result.requestId}`);
+                db.run('UPDATE requests SET blockcypherHookId = ? WHERE id = ?', [hookId, result.newRequestId]);
+                console.log(`Successfully updated hook ID ${hookId} for request ${result.newRequestId}`);
             }
 
             res.status(201).json({
-                requestId: result.requestId,
+                requestId: result.newRequestId, 
                 address: result.address,
                 requiredAmountSatoshis: result.requiredAmountSatoshis,
                 message: "Send the specified amount to the address to embed your message."
