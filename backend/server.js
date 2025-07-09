@@ -12,6 +12,7 @@ const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
 const opReturnCreator = require('./src/op_return_creator');
 const sqlite3 = require('sqlite3').verbose();
+const { cleanupOldRequests } = require('./src/cleanup.js');
 
 // --- Constants ---
 const { PORT, MNEMONIC, BLOCKCYPHER_TOKEN, WEBHOOK_RECEIVER_BASE_URL } = process.env;
@@ -434,3 +435,16 @@ app.listen(PORT || 3000, () => {
     console.log(`Test health: http://localhost:${actualPort}/api/health`);
     console.log(`Submit message request: POST http://localhost:${actualPort}/api/message-request`);
 });
+
+// Run the cleanup job once on startup, then every 6 hours thereafter.
+const CLEANUP_INTERVAL_MS = 6 * 60 * 60 * 1000; 
+
+// Run it once right away to clean up any old requests from before the server restarted.
+cleanupOldRequests(db); 
+
+// Then, schedule it to run periodically.
+setInterval(() => {
+    cleanupOldRequests(db);
+}, CLEANUP_INTERVAL_MS);
+
+console.log(`[Server] Cleanup job scheduled to run every ${CLEANUP_INTERVAL_MS / (60 * 60 * 1000)} hours.`);
