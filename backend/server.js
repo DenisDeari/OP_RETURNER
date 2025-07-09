@@ -301,7 +301,6 @@ app.post('/api/webhook/payment-notification', async (req, res) => {
 
             for (const targetAddress of output.addresses) {
                 const matchingRequest = await new Promise((resolve, reject) => {
-                    // Fetch request that is pending or had a payment detected (but not yet fully confirmed for OP_RETURN)
                     db.get("SELECT * FROM requests WHERE address = ? AND (status = 'pending_payment' OR status = 'payment_detected')", [targetAddress], (err, row) => {
                         if (err) return reject(new Error(`DB query failed for ${targetAddress}: ${err.message}`));
                         resolve(row);
@@ -312,31 +311,17 @@ app.post('/api/webhook/payment-notification', async (req, res) => {
                     console.log(`[Webhook] Found matching request ID ${matchingRequest.id} for address ${targetAddress} with status ${matchingRequest.status}`);
                     const valueReceivedSatoshis = output.value;
 
-                    // If already in a terminal OP_RETURN state, log and skip further processing for this request.
-                    if (matchingRequest.status === 'op_return_broadcasted' || matchingRequest.status === 'op_return_failed') {
-                        console.log(`[Webhook] Request ${matchingRequest.id} already in terminal state (${matchingRequest.status}). No further OP_RETURN action needed.`);
-                        // Update confirmations if they changed, but don't reset paymentProcessedForRequestObject if another output might be relevant
-                        if (matchingRequest.paymentTxId === txHash && confirmations > (matchingRequest.paymentConfirmationCount || 0)) {
-                             await new Promise(resolve => { // Using resolve directly as reject is not critical here
-                                 db.run('UPDATE requests SET paymentConfirmationCount = ? WHERE id = ?', [confirmations, matchingRequest.id], function(err) {
-                                     if (err) console.error(`[Webhook] DB update (confirmations on terminal state) failed: ${err.message}`);
-                                     else console.log(`[Webhook] Request ${matchingRequest.id} (terminal) confirmations updated to ${confirmations}.`);
-                                     resolve();
-                                 });
-                             });
-                        }
-                        // Set to null only if this was the target, or ensure logic handles not reprocessing it.
-                        // If one output leads to this, we should break from this inner loop for this address.
-                        paymentProcessedForRequestObject = null; // Prevent reprocessing by subsequent logic if this was the hit.
-                        break; // Break from iterating this output's addresses.
+                    if (matchingRequest.status === 'op_return_broadcasted' || matchingRequest.status === 'op_return_failed' || matchingRequest.status === 'processing_op_return') {
+                        console.log(`[Webhook] Request ${matchingRequest.id} already in a processing or terminal state (${matchingRequest.status}). No further action needed.`);
+                        paymentProcessedForRequestObject = null;
+                        break;
                     }
 
                     if (confirmations >= 1 && valueReceivedSatoshis >= matchingRequest.requiredAmountSatoshis) {
                         console.log(`[Webhook] Payment VALID for request ${matchingRequest.id}! (Conf: ${confirmations}, Received: ${valueReceivedSatoshis})`);
                         const updateParams = ['payment_confirmed', txHash, valueReceivedSatoshis, confirmations, notification.confirmed || new Date().toISOString(), matchingRequest.id];
-                        
+
                         await new Promise((resolve, reject) => {
-                            // Update to 'payment_confirmed' only if it's not already in a state that implies OP_RETURN processing has started/finished.
                             db.run('UPDATE requests SET status = ?, paymentTxId = ?, paymentReceivedSatoshis = ?, paymentConfirmationCount = ?, paymentConfirmedAt = ? WHERE id = ? AND (status = ? OR status = ?)',
                                 [...updateParams, 'pending_payment', 'payment_detected'], function(err) {
                                 if (err) return reject(new Error(`DB update to payment_confirmed failed: ${err.message}`));
@@ -348,12 +333,10 @@ app.post('/api/webhook/payment-notification', async (req, res) => {
                                 resolve();
                             });
                         });
-                        // Prepare the object for OP_RETURN processing. status will be re-checked.
-                        paymentProcessedForRequestObject = { ...matchingRequest, status: 'payment_confirmed', paymentTxId: txHash, paymentReceivedSatoshis: valueReceivedSatoshis, paymentConfirmationCount: confirmations, paymentConfirmedAt: notification.confirmed || new Date().toISOString() };
-                        break; // Address processed, break from iterating this output's addresses.
+                        paymentProcessedForRequestObject = { ...matchingRequest, status: 'payment_confirmed', paymentTxId: txHash };
+                        break;
                     } else if (valueReceivedSatoshis > 0 && valueReceivedSatoshis < matchingRequest.requiredAmountSatoshis && matchingRequest.status === 'pending_payment') {
-                        console.log(`[Webhook] Partial payment DETECTED for ${matchingRequest.id} (Received: ${valueReceivedSatoshis}, Required: ${matchingRequest.requiredAmountSatoshis}). Updating status.`);
-                         await new Promise(resolve => { // Using resolve directly as reject is not critical here
+                         await new Promise(resolve => {
                             db.run('UPDATE requests SET status = ?, paymentTxId = ?, paymentReceivedSatoshis = ?, paymentConfirmationCount = ? WHERE id = ? AND status = ?',
                                 ['payment_detected', txHash, valueReceivedSatoshis, confirmations, matchingRequest.id, 'pending_payment'], function(err) {
                                 if (err) console.error(`[Webhook] DB update to payment_detected failed: ${err.message}`);
@@ -361,47 +344,42 @@ app.post('/api/webhook/payment-notification', async (req, res) => {
                                 resolve();
                             });
                         });
-                        paymentProcessedForRequestObject = null; // Do not proceed to OP_RETURN
-                        break; 
-                    } else {
-                        console.log(`[Webhook] Payment for ${matchingRequest.id} not yet valid (Conf: ${confirmations}, Received: ${valueReceivedSatoshis}, Required: ${matchingRequest.requiredAmountSatoshis}). Current status: ${matchingRequest.status}`);
+                        paymentProcessedForRequestObject = null;
+                        break;
                     }
                 }
-            } // end for targetAddress
+            }
             if (paymentProcessedForRequestObject) {
-                    // If the inner loop (over addresses for the current output) resulted in finding
-                    // a valid request to process (i.e., paymentProcessedForRequestObject is not null),
-                    // then we can stop processing further outputs.
-                    console.log(`[Webhook] Found a request to process (ID: ${paymentProcessedForRequestObject.id}) from the current output. Breaking from outer output loop.`);
-                    break; // Break from the outer loop (iterating 'outputs')
-                }
-            } // end for output
+                console.log(`[Webhook] Found a request to process (ID: ${paymentProcessedForRequestObject.id}) from the current output. Breaking from outer output loop.`);
+                break;
+            }
+        }
 
-        // Check if we have a request that's confirmed and needs OP_RETURN processing
         if (paymentProcessedForRequestObject) {
-            // FRESH STATUS CHECK before critical OP_RETURN operation
-            const freshStatusRow = await new Promise((resolve, reject) => {
-                db.get("SELECT status FROM requests WHERE id = ?", [paymentProcessedForRequestObject.id], (err, row) => {
-                    if (err) {
-                        console.error(`[Webhook] DB query failed for fresh status check (ID: ${paymentProcessedForRequestObject.id}): ${err.message}`);
-                        return reject(new Error(`DB query failed for fresh status check: ${err.message}`));
-                    }
-                    resolve(row);
-                });
-            }).catch(err => { // Catch error from the promise itself if db.get fails internally before reject()
-                console.error(`[Webhook] Error fetching fresh status before OP_RETURN for ID ${paymentProcessedForRequestObject.id}:`, err);
-                throw err; // Propagate to main catch, send 200 to webhook provider
+            // --- ATOMIC LOCKING MECHANISM ---
+            // Try to acquire a lock by changing the status from 'payment_confirmed' to 'processing_op_return'.
+            // This is an atomic operation. Only one process can succeed.
+            const lockAcquired = await new Promise((resolve, reject) => {
+                db.run("UPDATE requests SET status = 'processing_op_return' WHERE id = ? AND status = 'payment_confirmed'",
+                    [paymentProcessedForRequestObject.id], function(err) {
+                        if (err) {
+                            console.error(`[Webhook] DB error acquiring lock for ${paymentProcessedForRequestObject.id}: ${err.message}`);
+                            return reject(err);
+                        }
+                        // If this.changes > 0, we successfully acquired the lock.
+                        resolve(this.changes > 0);
+                    });
             });
 
-            if (freshStatusRow && freshStatusRow.status === 'payment_confirmed') {
-                console.log(`[Webhook] Fresh status is 'payment_confirmed' for ${paymentProcessedForRequestObject.id}. Triggering OP_RETURN.`);
-                let finalOpStatus = 'op_return_failed'; // Default to failed
+            if (lockAcquired) {
+                console.log(`[Webhook] Lock ACQUIRED for ${paymentProcessedForRequestObject.id}. Triggering OP_RETURN.`);
+                let finalOpStatus = 'op_return_failed';
                 let opReturnTxId = null;
                 let opReturnTxHex = null;
 
                 try {
                     const opReturnResult = await opReturnCreator.createOpReturnTransaction(
-                        paymentProcessedForRequestObject, // This object still has 'payment_confirmed' as its status property
+                        paymentProcessedForRequestObject,
                         rootNode,
                         NETWORK,
                         { BLOCKCYPHER_API_BASE, BLOCKCYPHER_TOKEN }
@@ -419,49 +397,32 @@ app.post('/api/webhook/payment-notification', async (req, res) => {
                     console.error(`[Webhook] CATCH during OP_RETURN for ${paymentProcessedForRequestObject.id}:`, opReturnError);
                 }
 
-                // SMARTER DATABASE UPDATE
-                let sql;
-                let params;
-                if (finalOpStatus === 'op_return_broadcasted') {
-                    sql = "UPDATE requests SET status = ?, opReturnTxId = ?, opReturnTxHex = ? WHERE id = ? AND (status = ? OR status = ?)";
-                    params = [finalOpStatus, opReturnTxId, opReturnTxHex, paymentProcessedForRequestObject.id, 'payment_confirmed', 'op_return_failed'];
-                    console.log(`[Webhook] Attempting to set status to op_return_broadcasted for ${paymentProcessedForRequestObject.id} (can overwrite payment_confirmed or op_return_failed)`);
-                } else { // finalOpStatus === 'op_return_failed'
-                    sql = "UPDATE requests SET status = ?, opReturnTxId = ?, opReturnTxHex = ? WHERE id = ? AND status = ?";
-                    params = [finalOpStatus, opReturnTxId, opReturnTxHex, paymentProcessedForRequestObject.id, 'payment_confirmed'];
-                    console.log(`[Webhook] Attempting to set status to op_return_failed for ${paymentProcessedForRequestObject.id} (only if status is payment_confirmed)`);
-                }
-
+                // Update the final status, now that processing is complete.
                 await new Promise((resolve, reject) => {
+                    const sql = "UPDATE requests SET status = ?, opReturnTxId = ?, opReturnTxHex = ? WHERE id = ? AND status = ?";
+                    const params = [finalOpStatus, opReturnTxId, opReturnTxHex, paymentProcessedForRequestObject.id, 'processing_op_return'];
                     db.run(sql, params, function(err) {
                         if (err) {
-                            console.error(`[Webhook] DB update OP_RETURN details failed for ${paymentProcessedForRequestObject.id}:`, err);
+                            console.error(`[Webhook] DB update of FINAL OP_RETURN details failed for ${paymentProcessedForRequestObject.id}:`, err);
                             return reject(err);
                         }
-                        if (this.changes > 0) {
-                            console.log(`[Webhook] DB updated: Request ${paymentProcessedForRequestObject.id} status based on OP_RETURN result to ${finalOpStatus}.`);
-                        } else {
-                            console.warn(`[Webhook] DB NO-OP when updating OP_RETURN details for ${paymentProcessedForRequestObject.id} to ${finalOpStatus}. Condition not met (e.g. status was not 'payment_confirmed' for a fail, or not 'payment_confirmed'/'op_return_failed' for a success).`);
-                        }
+                        console.log(`[Webhook] DB updated: Request ${paymentProcessedForRequestObject.id} status changed from processing to ${finalOpStatus}.`);
                         resolve();
                     });
-                }).catch(dbUpdateErr => {
-                    console.error("[Webhook] CRITICAL - DB update of OP_RETURN results failed:", dbUpdateErr);
                 });
 
-            } else if (freshStatusRow && (freshStatusRow.status === 'op_return_broadcasted' || freshStatusRow.status === 'op_return_failed')) {
-                console.log(`[Webhook] Request ${paymentProcessedForRequestObject.id} status became terminal (${freshStatusRow.status}) just before OP_RETURN call. OP_RETURN call was skipped.`);
             } else {
-                console.log(`[Webhook] Request ${paymentProcessedForRequestObject.id} not in 'payment_confirmed' state (is ${freshStatusRow ? freshStatusRow.status : 'not found/error'}) right before OP_RETURN attempt. Skipping OP_RETURN call.`);
+                // This is the case where another process beat us to the lock.
+                console.log(`[Webhook] Lock for ${paymentProcessedForRequestObject.id} was already taken. Skipping OP_RETURN call as it's being handled by another process.`);
             }
         } else {
-            console.log("[Webhook] No request identified for OP_RETURN processing in this webhook event (either no valid payment found, or request already in terminal state).");
+            console.log("[Webhook] No new, actionable request identified in this webhook event.");
         }
 
         res.status(200).send('Webhook Notification Processed.');
     } catch (error) {
         console.error("!!! CATCH BLOCK ERROR processing webhook payload !!!", error);
-        res.status(200).send('Webhook received but internal processing error occurred.'); // ACK to Blockcypher
+        res.status(200).send('Webhook received but internal processing error occurred.');
     }
 });
 
