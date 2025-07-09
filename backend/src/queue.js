@@ -21,7 +21,12 @@ async function processNextInQueue(db, rootNode, config) {
         const coinType = config.NETWORK === bitcoin.networks.bitcoin ? 0 : 1;
         const derivationPath = `m/84'/${coinType}'/0'/0/${nextIndex}`;
         const childNode = rootNode.derivePath(derivationPath);
-        const address = bitcoin.payments.p2wpkh({ pubkey: childNode.publicKey, network: config.NETWORK }).address;
+        
+        // --- THIS IS THE FIX ---
+        // We must convert the public key from a Uint8Array to a Buffer.
+        const pubkeyBuffer = Buffer.from(childNode.publicKey);
+        const address = bitcoin.payments.p2wpkh({ pubkey: pubkeyBuffer, network: config.NETWORK }).address;
+        // --- END OF FIX ---
 
         const requiredAmountSatoshis = 1000;
         const newRequestId = uuidv4();
