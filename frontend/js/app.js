@@ -3,7 +3,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- Constants & State ---
     const API_BASE_URL = '';
-    const MAX_BYTES = 255; // Updated to match our new design
+    const MAX_BYTES = 80;
     let statusIntervalId = null;
     let currentRequestId = null;
 
