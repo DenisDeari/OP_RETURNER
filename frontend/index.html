@@ -3,79 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Immortalize Message</title>
-    <link rel="stylesheet" href="css/styles.css">
+    <title>Digital Time Capsule</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Roboto:wght@300;400&display=swap" rel="stylesheet">
 </head>
 <body>
+    <div class="container">
+        <header>
+            <h1>Digital Time Capsule</h1>
+        </header>
 
-    <header>
-        <h1 id="main-title">
-            <span id="title-line-1">IMMORTALIZE YOUR MESSAGE</span>
-            <span id="title-line-2">on the bitcoin blockchain</span>
-        </h1>
-    </header>
-
-    <main>
-        <section id="input-section">
-            <h2>Enter Your Message (Max 80 Bytes)</h2>
-            <textarea id="message-input" rows="4" maxlength="80" placeholder="Your message here..."></textarea>
-            <p>Bytes used: <span id="byte-counter">0</span> / 80</p>
-            <button id="submit-button">Immortalize!</button>
-        </section>
-
-        <section id="payment-section" style="display: none;">
-            <h2>Step 2: Make Payment</h2>
-            <p>Send exactly <strong id="required-amount">1000</strong> satoshis to the address below:</p>
-            <div id="payment-address-container">
-                <p>Address: <strong id="payment-address"></strong></p>
-                <div id="qrcode"></div>
+        <main class="card">
+            <div id="compose-step" class="wizard-step active">
+                <h2 class="step-title">Step 1: Compose Your Immortal Message</h2>
+                <textarea id="message-input" placeholder="Write your message here. It will be preserved forever on the blockchain..."></textarea>
+                <div class="controls">
+                    <div id="byte-counter" class="counter">
+                        <span id="byte-counter-span">0 / 255 bytes</span>
+                        <div class="progress-bar-container">
+                            <div id="progress-bar" class="progress-bar"></div>
+                        </div>
+                    </div>
+                    <button id="seal-message-button" class="button-primary">Seal Your Message</button>
+                </div>
             </div>
-            <p>Your Request ID: <strong id="request-id"></strong></p>
-            <p>Status: <strong id="status-display">Waiting for payment...</strong></p>
-            <p id="processing-indicator" style="display: none; font-weight: bold; color: #FFA500;">
-    Creating & Broadcasting your message transaction... Please wait.
-</p>
-            <hr style="margin-top: 20px; margin-bottom: 20px;">
-            <button id="new-request-button">Start New Message</button>
 
-        </section>
+            <div id="sealing-step" class="wizard-step">
+                <h2 class="step-title">Step 2: The Sealing Ceremony</h2>
+                <p class="review-prompt">You are about to permanently inscribe the following message onto the blockchain. This action is irreversible.</p>
+                <div class="message-review-box">
+                    <p id="final-message-review"></p>
+                </div>
+                <div class="button-group">
+                    <button id="edit-message-button" class="button-secondary">Edit Message</button>
+                    <button id="confirm-seal-button" class="button-primary">Confirm & Create Request</button>
+                </div>
+            </div>
 
-         <section id="lookup-section">
-            <hr>
-            <h2>Check Status of a Previous Request</h2>
-            <input type="text" id="lookup-id-input" placeholder="Enter Request ID">
-            <button id="lookup-button">Check Status</button>
-            <p id="lookup-status"></p>
-         </section>
-    </main>
-    <section id="success-section" style="display: none;">
-    <h2>Message Immortalized!</h2>
-    <p>Your original message:</p>
-    <blockquote id="final-message" style="font-style: italic; border-left: 3px solid #D83C00; padding-left: 10px; margin-left: 0;"></blockquote>
+            <div id="payment-step" class="wizard-step">
+                <h2 class="step-title">Step 3: Provide Payment</h2>
+                <p class="payment-prompt">To complete the process, send exactly <strong id="required-amount" class="highlight">...</strong> to the address below.</p>
+                <div id="qrcode"></div>
+                <div id="payment-address" class="address-box">...</div>
+                <div class="status-box">
+                    <p id="payment-status-display">Waiting for payment...</p>
+                    <div id="processing-indicator" class="spinner" style="display: none;"></div>
+                </div>
+            </div>
 
-    <p>
-        <span class="label">OP_RETURN Transaction ID:</span><br>
-        <strong id="final-op-return-txid" class="breakable"></strong>
-    </p>
-    <p>
-        <a id="explorer-link" href="#" target="_blank" rel="noopener noreferrer" style="color: #FFA500; text-decoration: underline;">View on Block Explorer</a>
-    </p>
-
-    <div>
-        <p><span class="label">Raw Transaction Hex (contains your message):</span></p>
-        <pre id="final-op-return-txhex"></pre>
+            <div id="success-step" class="wizard-step">
+                <h2 class="step-title success-title">🚀 Message Immortalized! 🚀</h2>
+                <p>Congratulations! Your message is now a permanent part of the Bitcoin blockchain.</p>
+                <div class="tx-info">
+                    <strong>Transaction ID:</strong>
+                    <span id="final-tx-id" class="tx-id"></span>
+                    <a id="explorer-link" href="#" target="_blank" class="explorer-link">View on Block Explorer</a>
+                </div>
+                <button id="create-new-message-button" class="button-primary">Immortalize Another Message</button>
+            </div>
+        </main>
+        <footer>
+            <a href="#">Look Up a Message by ID</a>
+        </footer>
     </div>
-
-    <hr style="margin-top: 20px; margin-bottom: 20px;">
-    <button id="success-new-request-button">Embed Another Message</button>
-</section>
-
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-<script src="js/app.js"></script>
-</body>
-</html>
-
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
-    <script src="js/app.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>

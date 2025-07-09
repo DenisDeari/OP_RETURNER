@@ -1,218 +1,139 @@
 // frontend/js/app.js
 
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Get DOM Elements ---
-    const messageInput = document.getElementById('message-input');
-    const byteCounter = document.getElementById('byte-counter');
-    const submitButton = document.getElementById('submit-button');
-    const inputSection = document.getElementById('input-section');
+    // --- Constants & State ---
+    const API_BASE_URL = '';
+    const MAX_BYTES = 255; // Updated to match our new design
+    let statusIntervalId = null;
+    let currentRequestId = null;
 
-    const paymentSection = document.getElementById('payment-section');
-    const paymentFlexContainer = document.querySelector('.payment-flex-container'); // For showing/hiding QR+Address
+    // --- DOM Elements for Step 1: Compose ---
+    const messageInput = document.getElementById('message-input');
+    const byteCounterSpan = document.getElementById('byte-counter-span');
+    const progressBar = document.getElementById('progress-bar');
+    const sealMessageButton = document.getElementById('seal-message-button');
+
+    // --- DOM Elements for Step 2: Seal & Confirm ---
+    const composeStep = document.getElementById('compose-step');
+    const sealingStep = document.getElementById('sealing-step');
+    const finalMessageReview = document.getElementById('final-message-review');
+    const confirmSealButton = document.getElementById('confirm-seal-button');
+    const editMessageButton = document.getElementById('edit-message-button');
+
+    // --- DOM Elements for Step 3: Payment ---
+    const paymentStep = document.getElementById('payment-step');
     const requiredAmountEl = document.getElementById('required-amount');
     const paymentAddressEl = document.getElementById('payment-address');
     const qrcodeContainer = document.getElementById('qrcode');
-    const requestIdEl = document.getElementById('request-id');
-    const statusDisplayEl = document.getElementById('status-display');
-    const newRequestButton = document.getElementById('new-request-button'); // In payment section
+    const paymentStatusDisplay = document.getElementById('payment-status-display');
     const processingIndicator = document.getElementById('processing-indicator');
 
-    const successSection = document.getElementById('success-section');
-    const finalMessageEl = document.getElementById('final-message');
-    const finalOpReturnTxidEl = document.getElementById('final-op-return-txid');
-    const explorerLinkEl = document.getElementById('explorer-link');
-    const finalOpReturnTxHexEl = document.getElementById('final-op-return-txhex');
-    const successNewRequestButton = document.getElementById('success-new-request-button'); // In success section
+    // --- DOM Elements for Step 4: Success ---
+    const successStep = document.getElementById('success-step');
+    const finalTxIdEl = document.getElementById('final-tx-id');
+    const explorerLink = document.getElementById('explorer-link');
+    const createNewMessageButton = document.getElementById('create-new-message-button');
 
-    const lookupIdInput = document.getElementById('lookup-id-input');
-    const lookupButton = document.getElementById('lookup-button');
-    const lookupStatusEl = document.getElementById('lookup-status');
+    // --- Functions from your original app.js (adapted for the new UI) ---
 
-    const API_BASE_URL = '';
-    let statusIntervalId = null;
-
-    // --- Functions ---
+    /**
+     * Updates the byte counter and progress bar based on user input.
+     */
     function updateByteCounter() {
-        try {
-            const message = messageInput.value;
-            const byteLength = new TextEncoder().encode(message).length;
-            byteCounter.textContent = byteLength;
-            if (byteLength > 80) {
-                byteCounter.style.color = 'red';
-                byteCounter.style.fontWeight = 'bold';
-            } else {
-                byteCounter.style.color = '';
-                byteCounter.style.fontWeight = '';
-            }
-        } catch (e) {
-            console.error("Error calculating byte length:", e);
-            byteCounter.textContent = 'Error';
+        const message = messageInput.value;
+        // Using TextEncoder is the most accurate way to measure byte length for UTF-8.
+        const byteLength = new TextEncoder().encode(message).length;
+
+        // Prevent user from exceeding the max byte limit
+        if (byteLength > MAX_BYTES) {
+            // This is a simple way to truncate. A more advanced implementation
+            // might find the exact character that crosses the boundary.
+            const truncatedMessage = new TextDecoder().decode(new TextEncoder().encode(message).slice(0, MAX_BYTES));
+            messageInput.value = truncatedMessage;
+            updateByteCounter(); // Recalculate after truncation
+            return;
+        }
+
+        byteCounterSpan.textContent = `${byteLength} / ${MAX_BYTES} bytes`;
+        const percentage = (byteLength / MAX_BYTES) * 100;
+        progressBar.style.width = `${percentage}%`;
+
+        // Change progress bar color if limit is reached
+        if (byteLength >= MAX_BYTES) {
+            progressBar.style.backgroundColor = '#d9534f'; // A red warning color
+        } else {
+            progressBar.style.background = 'linear-gradient(90deg, #ff9900, #ff5f6d)'; // Reset to gradient
         }
     }
 
-    function showPaymentInfo(requestData) {
-        paymentAddressEl.textContent = requestData.address;
-        requestIdEl.textContent = requestData.requestId;
-        requiredAmountEl.textContent = requestData.requiredAmountSatoshis;
 
-        qrcodeContainer.innerHTML = '';
-        try {
-            new QRCode(qrcodeContainer, {
-                text: `bitcoin:${requestData.address}?amount=${requestData.requiredAmountSatoshis / 100000000}`,
-                width: 128,
-                height: 128,
-                correctLevel: QRCode.CorrectLevel.M
-            });
-        } catch (e) {
-            console.error("Failed to generate QR code:", e);
-            qrcodeContainer.textContent = 'Error generating QR code.';
-        }
-
-        inputSection.style.display = 'none';
-        paymentSection.style.display = 'block';
-        if(paymentFlexContainer) paymentFlexContainer.style.display = 'flex'; // Ensure QR/Address part is visible
-        successSection.style.display = 'none';
-        processingIndicator.style.display = 'none';
-
-        clearTimeout(statusIntervalId);
-        checkStatus(requestData.requestId);
+    /**
+     * Transitions the UI from one step to another.
+     * @param {string} currentStepId - The ID of the current step to hide.
+     * @param {string} nextStepId - The ID of the next step to show.
+     */
+    function transitionToStep(currentStepId, nextStepId) {
+        document.getElementById(currentStepId).classList.remove('active');
+        document.getElementById(nextStepId).classList.add('active');
     }
 
-    async function checkStatus(requestId) {
-        console.log(`Checking status for ${requestId}...`);
-        if (!requestId) return;
 
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/request-status/${requestId}`);
-            if (lookupStatusEl) lookupStatusEl.textContent = '';
-
-            if (response.ok) {
-                const data = await response.json();
-                console.log("Status data from backend:", data);
-                let currentStatusText = formatStatus(data);
-                statusDisplayEl.textContent = currentStatusText;
-
-                if (document.activeElement === lookupButton || (lookupIdInput && lookupIdInput.value === requestId)) {
-                    if(lookupStatusEl) lookupStatusEl.textContent = `Status for ${requestId}: ${currentStatusText}`;
-                }
-
-                // Default UI states
-                processingIndicator.style.display = 'none';
-                if (paymentFlexContainer) paymentFlexContainer.style.display = 'flex'; // Show QR/Address by default
-
-                if (data.status === 'payment_confirmed') {
-                    statusDisplayEl.textContent = "Payment Confirmed. Creating & Broadcasting your message...";
-                    processingIndicator.style.display = 'block';
-                    if (paymentFlexContainer) paymentFlexContainer.style.display = 'none'; // Hide QR/Address
-                    clearTimeout(statusIntervalId);
-                    statusIntervalId = setTimeout(() => checkStatus(requestId), 5000); // Poll faster
-                } else if (data.status === 'op_return_broadcasted') {
-                    statusDisplayEl.textContent = "Message Embedded & Broadcasted Successfully!"; // This element will now be hidden along with paymentSection
-                    if (paymentFlexContainer) paymentFlexContainer.style.display = 'none'; // Hide QR/Address part
-                    processingIndicator.style.display = 'none'; //
-                    paymentSection.style.display = 'none'; // HIDE THE ENTIRE PAYMENT SECTION
-                    successSection.style.display = 'block'; // Show success details
-
-                    finalMessageEl.textContent = data.message || 'N/A'; //
-                    finalOpReturnTxidEl.textContent = data.opReturnTxId || 'N/A'; //
-                    if (data.opReturnTxId) {
-                        // Assuming mainnet for now. Adjust if using testnet.
-                        explorerLinkEl.href = `https://mempool.space/tx/${data.opReturnTxId}`; //
-                        explorerLinkEl.style.display = 'inline'; //
-                    } else {
-                        explorerLinkEl.style.display = 'none'; //
-                    }
-                    finalOpReturnTxHexEl.textContent = data.opReturnTxHex || 'Raw transaction hex not available.'; //
-
-                    clearTimeout(statusIntervalId); //
-                } else if (data.status === 'op_return_failed') {
-                    statusDisplayEl.textContent = "Error: Failed to create/broadcast OP_RETURN. Please contact support.";
-                    if (paymentFlexContainer) paymentFlexContainer.style.display = 'none';
-                    processingIndicator.style.display = 'none';
-                    clearTimeout(statusIntervalId);
-                } else {
-                    // For 'pending_payment', 'payment_detected', or other active states
-                    const activeStates = ['pending_payment', 'payment_detected'];
-                    if (activeStates.includes(data.status)) {
-                         clearTimeout(statusIntervalId);
-                         statusIntervalId = setTimeout(() => checkStatus(requestId), 10000);
-                    } else { // Assume other statuses might be final errors if not explicitly active
-                        console.log(`Status (${data.status}) considered final or unhandled for polling. Stopping polling.`);
-                        clearTimeout(statusIntervalId);
-                    }
-                }
-            } else if (response.status === 404) {
-                statusDisplayEl.textContent = "Request ID not found.";
-                if (lookupStatusEl) lookupStatusEl.textContent = `Request ID ${requestId} not found.`;
-                clearTimeout(statusIntervalId);
-            } else {
-                statusDisplayEl.textContent = `Error checking status (${response.status}).`;
-                if (lookupStatusEl) lookupStatusEl.textContent = `Error checking status for ${requestId}.`;
-                clearTimeout(statusIntervalId);
-            }
-        } catch (error) {
-            statusDisplayEl.textContent = "Network error checking status.";
-            if (lookupStatusEl) lookupStatusEl.textContent = "Network error checking status.";
-            console.error("Network error fetching status:", error);
+    /**
+     * Resets the entire UI to the initial composing step.
+     * (Replaces your original resetToInputState function)
+     */
+    function resetToComposeState() {
+        // Clear any polling intervals
+        if (statusIntervalId) {
             clearTimeout(statusIntervalId);
+            statusIntervalId = null;
         }
-    }
 
-    function formatStatus(data) {
-        let text = `${data.status || 'Unknown'}`;
-        if (data.status === 'payment_confirmed') {
-            text = `Payment Confirmed! (Payment TX: ${data.paymentTxId || 'N/A'}) Processing OP_RETURN...`;
-        } else if (data.status === 'op_return_broadcasted') {
-            text = `Message Embedded! (OP_RETURN TX: ${data.opReturnTxId || 'N/A'})`;
-        } else if (data.status === 'op_return_failed') {
-            text = `Failed to embed message. (Payment TX: ${data.paymentTxId || 'N/A'})`;
-        } else if (data.paymentTxId && (data.status === 'pending_payment' || data.status === 'payment_detected')) {
-            text = `${data.status} (Payment TX: ${data.paymentTxId})`;
-        }
-        return text.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    }
-
-    function resetToInputState() {
-        console.log("Resetting UI to input state.");
+        // Clear local storage and state
         localStorage.removeItem('activeRequestId');
-        localStorage.removeItem('activeRequestAddress');
-        localStorage.removeItem('activeRequestAmount');
+        currentRequestId = null;
 
-        clearTimeout(statusIntervalId);
-        statusIntervalId = null;
-
-        paymentSection.style.display = 'none';
-        successSection.style.display = 'none';
-        processingIndicator.style.display = 'none';
-        if(paymentFlexContainer) paymentFlexContainer.style.display = 'flex'; // Reset for next time
-        inputSection.style.display = 'block';
-
+        // Reset input fields
         messageInput.value = '';
-        if(statusDisplayEl) statusDisplayEl.textContent = 'Waiting for payment...'; // Default text
-        if(qrcodeContainer) qrcodeContainer.innerHTML = '';
+        finalMessageReview.textContent = '';
+        qrcodeContainer.innerHTML = '';
+        paymentStatusDisplay.textContent = 'Waiting for payment...';
+
+        // Reset progress bar and counter
         updateByteCounter();
 
-        if(lookupIdInput) lookupIdInput.value = '';
-        if(lookupStatusEl) lookupStatusEl.textContent = '';
-        
-        // Ensure submit button is in its initial state
-        submitButton.disabled = false;
-        submitButton.textContent = 'Immortalize!';
+        // Show the first step and hide others
+        composeStep.classList.add('active');
+        sealingStep.classList.remove('active');
+        paymentStep.classList.remove('active');
+        successStep.classList.remove('active');
+
+        // Re-enable buttons
+        sealMessageButton.disabled = false;
+        confirmSealButton.disabled = false;
+        confirmSealButton.textContent = 'Confirm & Create Request';
     }
 
-    // --- Event Listeners ---
-    messageInput.addEventListener('input', updateByteCounter);
 
-    submitButton.addEventListener('click', async () => {
+    /**
+     * Initiates the API request to get a payment address.
+     * (This is the core of your original submitButton click handler).
+     */
+    async function createMessageRequest() {
         const message = messageInput.value;
         const byteLength = new TextEncoder().encode(message).length;
 
-        if (byteLength === 0) { alert("Please enter a message."); return; }
-        if (byteLength > 80) { alert("Message exceeds 80 bytes limit."); return; }
+        if (byteLength === 0) {
+            alert("Please enter a message to immortalize.");
+            return;
+        }
+        if (byteLength > MAX_BYTES) {
+            alert(`Your message is ${byteLength} bytes, which exceeds the ${MAX_BYTES} byte limit.`);
+            return;
+        }
 
-        submitButton.disabled = true;
-        submitButton.textContent = 'Processing...';
-        if (statusDisplayEl) statusDisplayEl.textContent = 'Requesting payment address...';
+        confirmSealButton.disabled = true;
+        confirmSealButton.textContent = 'Requesting...';
 
         try {
             const response = await fetch(`${API_BASE_URL}/api/message-request`, {
@@ -220,73 +141,170 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ message: message }),
             });
+
             const responseData = await response.json();
+
             if (response.ok && response.status === 201) {
-                localStorage.setItem('activeRequestId', responseData.requestId);
-                localStorage.setItem('activeRequestAddress', responseData.address);
-                localStorage.setItem('activeRequestAmount', responseData.requiredAmountSatoshis);
+                // Success! We have the payment info.
+                currentRequestId = responseData.requestId;
+                localStorage.setItem('activeRequestId', currentRequestId); // Persist for page reloads
                 showPaymentInfo(responseData);
+                transitionToStep('sealing-step', 'payment-step');
+                checkStatus(currentRequestId); // Start polling for payment
             } else {
-                if (statusDisplayEl) statusDisplayEl.textContent = `Error: ${responseData.error || 'Failed to create request.'}`;
-                alert(`Error: ${responseData.error || 'Failed to create request.'}`);
+                // Handle server-side errors
+                alert(`Error: ${responseData.error || 'Failed to create the request. Please try again.'}`);
+                confirmSealButton.disabled = false;
+                confirmSealButton.textContent = 'Confirm & Create Request';
             }
         } catch (error) {
-            console.error("Error submitting message request:", error);
-            if (statusDisplayEl) statusDisplayEl.textContent = "Error: Could not connect to server.";
-            alert("Error: Could not connect to server.");
-        } finally {
-            submitButton.disabled = false;
-            submitButton.textContent = 'Immortalize!';
+            console.error("Error creating message request:", error);
+            alert("A network error occurred. Could not connect to the server.");
+            confirmSealButton.disabled = false;
+            confirmSealButton.textContent = 'Confirm & Create Request';
         }
-    });
-
-    if (lookupButton) {
-        lookupButton.addEventListener('click', () => {
-            const lookupId = lookupIdInput.value.trim();
-            if (lookupId) {
-                if (lookupStatusEl) lookupStatusEl.textContent = 'Checking...';
-                clearTimeout(statusIntervalId);
-                checkStatus(lookupId);
-            } else {
-                if (lookupStatusEl) lookupStatusEl.textContent = 'Please enter a Request ID.';
-            }
-        });
     }
 
-    if (newRequestButton) newRequestButton.addEventListener('click', resetToInputState);
-    if (successNewRequestButton) successNewRequestButton.addEventListener('click', resetToInputState);
+
+    /**
+     * Displays the QR code and payment details.
+     * (Adapted from your original showPaymentInfo function).
+     * @param {object} requestData - The data object from the /api/message-request response.
+     */
+    function showPaymentInfo(requestData) {
+        paymentAddressEl.textContent = requestData.address;
+        requiredAmountEl.textContent = `${requestData.requiredAmountSatoshis} SATs`;
+
+        qrcodeContainer.innerHTML = ''; // Clear previous QR code
+        try {
+            new QRCode(qrcodeContainer, {
+                text: `bitcoin:${requestData.address}?amount=${requestData.requiredAmountSatoshis / 100000000}`,
+                width: 150,
+                height: 150,
+                colorDark: "#e0e0e0",
+                colorLight: "rgba(23, 28, 58, 0.7)",
+                correctLevel: QRCode.CorrectLevel.M
+            });
+        } catch (e) {
+            console.error("Failed to generate QR code:", e);
+            qrcodeContainer.textContent = 'Error generating QR code.';
+        }
+    }
+
+    /**
+     * Polls the backend for the status of a request.
+     * (This is your original checkStatus function, with UI updates adapted for the new layout).
+     */
+    async function checkStatus(requestId) {
+        console.log(`Checking status for ${requestId}...`);
+        if (!requestId) return;
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/request-status/${requestId}`);
+
+            if (!response.ok) {
+                // Handle non-200 responses (like 404)
+                paymentStatusDisplay.textContent = `Error checking status (${response.status}).`;
+                clearTimeout(statusIntervalId);
+                return;
+            }
+
+            const data = await response.json();
+            console.log("Status data:", data);
+
+            // Update UI based on status
+            processingIndicator.style.display = 'none'; // Hide by default
+
+            switch (data.status) {
+                case 'pending_payment':
+                    paymentStatusDisplay.textContent = 'Waiting for payment...';
+                    statusIntervalId = setTimeout(() => checkStatus(requestId), 10000); // Poll every 10s
+                    break;
+                case 'payment_detected':
+                    paymentStatusDisplay.textContent = 'Payment detected! Awaiting confirmation...';
+                    statusIntervalId = setTimeout(() => checkStatus(requestId), 10000); // Poll every 10s
+                    break;
+                case 'payment_confirmed':
+                    paymentStatusDisplay.textContent = 'Payment Confirmed! Broadcasting to the blockchain...';
+                    processingIndicator.style.display = 'block'; // Show spinner
+                    qrcodeContainer.style.display = 'none'; // Hide QR code
+                    statusIntervalId = setTimeout(() => checkStatus(requestId), 5000); // Poll faster
+                    break;
+                case 'op_return_broadcasted':
+                    // --- SUCCESS ---
+                    paymentStatusDisplay.textContent = 'Message Broadcast Successfully!';
+                    clearTimeout(statusIntervalId);
+                    showSuccessInfo(data);
+                    transitionToStep('payment-step', 'success-step');
+                    break;
+                case 'op_return_failed':
+                    paymentStatusDisplay.textContent = 'Error: Failed to broadcast your message. Please contact support.';
+                    processingIndicator.style.display = 'none';
+                    clearTimeout(statusIntervalId);
+                    break;
+                default:
+                    paymentStatusDisplay.textContent = `Status: ${data.status.replace(/_/g, ' ')}`;
+                    clearTimeout(statusIntervalId); // Stop polling for unknown statuses
+            }
+
+        } catch (error) {
+            console.error("Network error fetching status:", error);
+            paymentStatusDisplay.textContent = "Network error while checking status.";
+            clearTimeout(statusIntervalId);
+        }
+    }
+
+    /**
+     * Displays the final success information.
+     * @param {object} successData - The data object from the final status check.
+     */
+    function showSuccessInfo(successData) {
+        finalTxIdEl.textContent = successData.opReturnTxId || 'N/A';
+        explorerLink.href = `https://mempool.space/tx/${successData.opReturnTxId}`;
+    }
+
+
+    // --- Event Listeners ---
+
+    messageInput.addEventListener('input', updateByteCounter);
+
+    // --- Step 1 to Step 2 Transition ---
+    sealMessageButton.addEventListener('click', () => {
+        if (new TextEncoder().encode(messageInput.value).length === 0) {
+            alert("Please write a message first!");
+            return;
+        }
+        finalMessageReview.textContent = messageInput.value;
+        transitionToStep('compose-step', 'sealing-step');
+    });
+
+    // --- Step 2 to Step 1 (Edit) ---
+    editMessageButton.addEventListener('click', () => {
+        transitionToStep('sealing-step', 'compose-step');
+    });
+
+    // --- Step 2 to Step 3 (Confirm & Pay) ---
+    confirmSealButton.addEventListener('click', createMessageRequest);
+
+    // --- New Message Button (from Success screen) ---
+    createNewMessageButton.addEventListener('click', resetToComposeState);
+
 
     // --- Initial Page Load Logic ---
     function initialize() {
+        // This function checks if there's an unfinished process from a previous session.
         const savedRequestId = localStorage.getItem('activeRequestId');
         if (savedRequestId) {
-            const savedAddress = localStorage.getItem('activeRequestAddress');
-            const savedAmount = localStorage.getItem('activeRequestAmount');
-
-            successSection.style.display = 'none';
-            processingIndicator.style.display = 'none';
-
-            if (savedAddress && savedAmount) {
-                showPaymentInfo({
-                    requestId: savedRequestId,
-                    address: savedAddress,
-                    requiredAmountSatoshis: parseInt(savedAmount, 10)
-                });
-            } else {
-                inputSection.style.display = 'none';
-                paymentSection.style.display = 'block';
-                if (paymentFlexContainer) paymentFlexContainer.style.display = 'flex';
-                if(requestIdEl) requestIdEl.textContent = savedRequestId;
-                if(statusDisplayEl) statusDisplayEl.textContent = 'Checking status...';
-                checkStatus(savedRequestId);
-            }
+            console.log(`Found saved request ID: ${savedRequestId}`);
+            currentRequestId = savedRequestId;
+            // We don't have the message or payment info, so we go straight to the payment step
+            // and let the status check fill in the details.
+            transitionToStep('compose-step', 'payment-step');
+            checkStatus(currentRequestId);
         } else {
-            inputSection.style.display = 'block';
-            paymentSection.style.display = 'none';
-            successSection.style.display = 'none';
-            processingIndicator.style.display = 'none';
+            // Default state
+            resetToComposeState();
         }
-        updateByteCounter();
     }
 
     initialize();

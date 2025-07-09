@@ -1,231 +1,267 @@
-/* --- Base and Font --- */
-@font-face {
-    font-family: 'BTTFStyleFont';
-    src: url('/fonts/BTTF.ttf') format('truetype');
-    font-weight: normal;
-    font-style: normal;
-}
-
+/* General Body Styles */
 body {
-    font-family: sans-serif;
-    line-height: 1.6;
-    margin: 0; /* Remove default margin */
-    padding: 20px; /* Add padding to body instead of margin */
-    background-color: #0A2342; /* Dark Blue Background */
-    color: #f0f0f0; /* Light default text color for contrast */
+    font-family: 'Roboto', sans-serif;
+    background-color: #0c1021;
+    color: #e0e0e0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    background-image: url('https://www.transparenttextures.com/patterns/stardust.png');
 }
 
-/* --- Header Styling --- */
-header {
-    /* text-align: center; */ /* Alignment is handled by lines now */
-    margin-bottom: 30px;
+.container {
+    width: 100%;
+    max-width: 600px;
+    text-align: center;
+    padding: 2rem;
 }
 
-#main-title {
-    font-family: 'BTTFStyleFont', Impact, Charcoal, sans-serif;
-    line-height: 1.1;
-    /* === Add color and shadow back === */
-    color: #D83C00; /* Orange Color */
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+/* Header and Title */
+header h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 3rem;
+    color: #ff9900;
+    text-shadow: 0 0 10px #ff9900, 0 0 20px #ff9900;
+    margin-bottom: 0.5rem;
 }
 
-#title-line-1 {
-    display: block;
-    font-size: 2.5em;
+.subtitle {
+    font-size: 1.2rem;
+    color: #a0a0c0;
+    margin-bottom: 2rem;
+}
+
+/* Main Content Card */
+.card {
+    background: rgba(23, 28, 58, 0.7);
+    border: 1px solid #ff9900;
+    border-radius: 15px;
+    padding: 2rem;
+    box-shadow: 0 0 25px rgba(255, 153, 0, 0.3);
+    backdrop-filter: blur(10px);
+}
+
+/* Text Area */
+#message-input {
+    width: 100%;
+    height: 200px;
+    background-color: rgba(10, 15, 40, 0.8);
+    border: 1px dashed #4a5588;
+    border-radius: 10px;
+    padding: 1rem;
+    font-family: 'Roboto', sans-serif;
+    font-size: 1rem;
+    color: #e0e0e0;
+    resize: none;
+    box-sizing: border-box;
+    margin-bottom: 1rem;
+}
+
+#message-input:focus {
+    outline: none;
+    border: 1px solid #ff9900;
+    box-shadow: 0 0 10px rgba(255, 153, 0, 0.5);
+}
+
+/* Controls section */
+.controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+/* Byte Counter */
+.counter {
+    font-size: 0.9rem;
+    color: #a0a0c0;
+    flex-grow: 1;
     text-align: left;
 }
 
-#title-line-2 {
-    display: block;
-    font-size: 1.8em;
-    text-align: right;
-}
-
-/* --- Main Content Area --- */
-main {
-    max-width: 800px;
-    margin: auto;
-    background: #1C3A5E; /* Slightly Lighter Dark Blue */
-    padding: 25px; /* Increased padding slightly */
-    border-radius: 8px;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.3); /* Adjusted shadow */
-}
-
-/* --- Form Elements --- */
-textarea {
-    width: 95%;
-    padding: 10px;
-    margin-bottom: 10px; /* Increased margin */
-    border: 1px solid #D83C00; /* Orange border */
-    border-radius: 4px;
-    background-color: #f0f0f0; /* Light background for input */
-    color: #333; /* Dark text for input */
-    font-size: 1em;
-}
-
-button {
-    padding: 12px 18px; /* Slightly larger button */
-    background-color: #D83C00; /* Orange Button Background */
-    color: #ffffff; /* White text on button */
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 1em;
-    font-weight: bold;
-    transition: background-color 0.2s ease; /* Smooth hover transition */
-}
-
-button:hover {
-    background-color: #B83000; /* Darker Orange on hover */
-}
-
-button:disabled { /* Style for disabled button */
-    background-color: #888;
-    cursor: not-allowed;
-}
-
-/* --- Payment/Status Section --- */
-#payment-section {
-    margin-top: 25px;
-    padding: 20px;
-    border: 1px solid #D83C00; /* Orange border */
+.progress-bar-container {
+    background-color: #0c1021;
     border-radius: 5px;
-    background-color: #0A2342; /* Match body background or slightly different blue */
+    height: 10px;
+    margin-top: 5px;
+    overflow: hidden;
+    border: 1px solid #4a5588;
 }
 
-#payment-address-container {
-    margin-bottom: 15px;
-}
-
-#qrcode {
-    width: 138px; /* Slightly larger */
-    height: 138px;
-    margin-top: 10px;
-    border: 1px solid #f0f0f0; /* Light border for QR */
-    padding: 5px;
-    display: inline-block;
-    background-color: #fff; /* White background for QR code readability */
-}
-
-#qrcode img {
-    display: block;
-    width: 100%;
+.progress-bar {
+    width: 0;
     height: 100%;
+    background: linear-gradient(90deg, #ff9900, #ff5f6d);
+    transition: width 0.3s ease-in-out;
 }
 
-/* Make important text stand out */
-strong {
-    word-wrap: break-word;
-    color: #FFA500; /* Lighter Orange for emphasis? Or keep light grey? */
-    /* Or use the main orange: color: #D83C00; */
-}
-
-#status-display {
-    font-weight: bold;
-    margin-top: 10px;
-    display: inline-block; /* Or block */
-    word-break: break-all;
-}
-
-/* --- Lookup Section --- */
-#lookup-section {
-     margin-top: 25px;
-     padding-top: 15px;
-     border-top: 1px solid #1C3A5E; /* Separator line */
-}
-
-#lookup-section input {
-    padding: 8px;
-    margin-right: 5px;
-    border: 1px solid #D83C00; /* Orange border */
-    border-radius: 4px;
-    background-color: #f0f0f0; /* Light background */
-    color: #333; /* Dark text */
-}
-
-#lookup-status {
-    margin-top: 10px;
-    font-style: italic;
-}
-
-/* --- Processing Indicator --- */
-#processing-indicator {
-    color: #FFA500; /* Orange accent for processing text */
-    font-weight: bold;
-    margin-top: 15px;
-    margin-bottom: 10px;
-    text-align: center;
-    /* Basic dot animation (optional) */
-    /* animation: dots 1.5s infinite steps(1, end); */
-}
-
-@keyframes dots {
-  0%, 20% { color: rgba(0,0,0,0); text-shadow: .25em 0 0 rgba(0,0,0,0), .5em 0 0 rgba(0,0,0,0); }
-  40% { color: #FFA500; text-shadow: .25em 0 0 rgba(0,0,0,0), .5em 0 0 rgba(0,0,0,0); }
-  60% { text-shadow: .25em 0 0 #FFA500, .5em 0 0 rgba(0,0,0,0); }
-  80%, 100% { text-shadow: .25em 0 0 #FFA500, .5em 0 0 #FFA500; }
-}
-
-
-/* --- Success Section --- */
-#success-section {
-    max-width: 800px; /* Match main section width */
-    margin: 20px auto; /* Centered, with space */
-    padding: 25px;
-    background: #1C3A5E; /* Consistent with main section */
-    border: 1px solid #D83C00; /* Orange border */
+/* Buttons */
+.button-primary {
+    background: linear-gradient(45deg, #ff7e5f, #feb47b);
+    color: #111;
+    border: none;
     border-radius: 8px;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
-    color: #f0f0f0; /* Light text */
-}
-
-#success-section h2 {
-    color: #5cb85c; /* Green for success message */
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-#success-section p {
-    margin-bottom: 10px;
-}
-
-#success-section .label { /* Re-using .label style */
+    padding: 12px 24px;
+    font-size: 1rem;
     font-weight: bold;
-    color: #FFA500;
-    margin-right: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(255, 126, 95, 0.4);
 }
 
-#success-section .breakable { /* Re-using .breakable style */
-    word-break: break-all;
+.button-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 126, 95, 0.6);
+}
+
+/* Footer */
+footer {
+    margin-top: 2rem;
+}
+
+footer a {
+    color: #a0a0c0;
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+footer a:hover {
+    color: #ff9900;
+}
+
+/* Wizard Flow */
+.wizard-step {
+    display: none; /* Hide all steps by default */
+    animation: fadeIn 0.5s;
+}
+
+.wizard-step.active {
+    display: block; /* Show only the active step */
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.step-title {
+    font-size: 1.5rem;
+    color: #ff9900;
+    margin-bottom: 1.5rem;
+}
+
+/* Step 2: Sealing Ceremony */
+.review-prompt {
+    margin-bottom: 1rem;
+    color: #a0a0c0;
+}
+.message-review-box {
+    background-color: rgba(10, 15, 40, 0.9);
+    border: 1px solid #4a5588;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    min-height: 100px;
+    white-space: pre-wrap; /* Preserves line breaks from the textarea */
+    word-wrap: break-word;
+    text-align: left;
+    color: #e0e0e0;
+}
+.button-group {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+}
+.button-secondary {
+    background: transparent;
+    border: 1px solid #4a5588;
+    color: #a0a0c0;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.button-secondary:hover {
+    background-color: #4a5588;
+    color: #fff;
+}
+
+
+/* Step 3: Payment */
+.payment-prompt {
+    margin-bottom: 1.5rem;
+}
+.highlight {
+    color: #ff9900;
+    font-weight: bold;
+}
+#qrcode {
+    margin: 1rem auto;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 8px;
     display: inline-block;
-    vertical-align: bottom;
-    color: #f0f0f0;
 }
-
-#final-message { /* For the displayed original message */
-    background-color: #0A2342; /* Darker background for emphasis */
-    padding: 10px;
-    border-radius: 4px;
-    font-family: monospace; /* Good for seeing the message as is */
-    white-space: pre-wrap; /* Preserve whitespace and wrap */
-}
-
-#final-op-return-txhex {
-    background-color: #071c33; /* Even darker blue */
-    color: #d0d0d0;
-    padding: 10px;
-    border: 1px solid #2a4a6a; /* Adjusted border for dark theme */
-    border-radius: 4px;
-    overflow-x: auto; /* Horizontal scroll for long hex */
-    white-space: pre-wrap;
-    word-break: break-all;
+.address-box {
+    background: rgba(10, 15, 40, 0.9);
+    border: 1px solid #4a5588;
+    padding: 0.75rem;
+    border-radius: 5px;
     font-family: monospace;
-    max-height: 150px; /* Scroll for very long hex, adjust as needed */
-    font-size: 0.85em; /* Slightly smaller for dense hex */
+    word-break: break-all;
+    margin-bottom: 1.5rem;
+}
+.status-box {
+    min-height: 50px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
 }
 
-#success-section button { /* Style for the new button in success section */
-    display: block; /* Make it full width */
-    width: 100%;
-    margin-top: 20px;
+/* Spinner for processing indicator */
+.spinner {
+    border: 4px solid rgba(255, 255, 255, 0.2);
+    border-left-color: #ff9900;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+    margin-top: 10px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+
+/* Step 4: Success */
+.success-title {
+    color: #28a745; /* Green for success */
+    text-shadow: 0 0 10px #28a745;
+}
+.tx-info {
+    margin: 2rem 0;
+    background: rgba(10, 15, 40, 0.9);
+    padding: 1rem;
+    border-radius: 8px;
+    border-left: 5px solid #28a745;
+}
+.tx-id {
+    font-family: monospace;
+    word-break: break-all;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+.explorer-link {
+    color: #ff9900;
+    text-decoration: none;
+    font-weight: bold;
+}
+.explorer-link:hover {
+    text-decoration: underline;
 }
