@@ -37,6 +37,7 @@ function initializeDatabase() {
             paymentConfirmedAt TEXT,
             opReturnTxId TEXT,
             opReturnTxHex TEXT
+            error_log TEXT
         );
     `;
     db.run(createTableSql, (err) => {

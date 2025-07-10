@@ -44,12 +44,21 @@
 
             <div id="payment-step" class="wizard-step">
                 <h2 class="step-title">Step 3: Provide Payment</h2>
-                <p class="payment-prompt">To complete the process, send exactly <strong id="required-amount" class="highlight">...</strong> to the address below.</p>
+                <p class="payment-prompt">To complete the process, send the exact amount of Bitcoin to the address below.</p>
+                
+                <p><strong>Your unique Capsule ID is: <span id="capsule-id-display" class="highlight"></span></strong><br><small>Save this ID to look up your message later.</small></p>
+                
                 <div id="qrcode"></div>
                 <div id="payment-address" class="address-box">...</div>
+                <p class="payment-prompt">Amount: <strong id="required-amount" class="highlight">...</strong> BTC</p>
+
                 <div class="status-box">
                     <p id="payment-status-display">Waiting for payment...</p>
                     <div id="processing-indicator" class="spinner" style="display: none;"></div>
+                </div>
+
+                <div class="button-group">
+                    <button id="start-over-button" class="button-secondary">Start Over</button>
                 </div>
             </div>
 

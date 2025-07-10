@@ -5,6 +5,27 @@ const axios = require('axios');
 // This function creates a router and injects dependencies (db, wallet, etc.)
 function createApiRouter(db, rootNode, config, requestQueue) {
     const router = express.Router();
+    router.get('/request/:id', (req, res) => {
+    const { id } = req.params;
+    db.get('SELECT * FROM requests WHERE id = ?', [id], (err, row) => {
+        if (err) {
+            return res.status(500).json({ error: 'Database error' });
+        }
+        if (!row) {
+            return res.status(404).json({ error: 'Request not found' });
+        }
+        // Return only the data safe for public viewing
+        res.json({
+            id: row.id,
+            message: row.message,
+            address: row.address,
+            amount: row.requiredAmountSatoshis,
+            status: row.status,
+            tx_id: row.opReturnTxId,
+            created_at: row.createdAt
+        });
+    });
+});
 
     // --- Helper for Webhook Registration ---
     async function registerWebhook(btcAddress) {
